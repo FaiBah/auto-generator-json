@@ -1,0 +1,25 @@
+name: Generate UUID JSON
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+
+    - name: Generate UUID and write to JSON
+      run: |
+        uuid=$(uuidgen)
+        echo "{ \"uuid\": \"$uuid\" }" > uuid.json
+
+    - name: Commit and Push
+      run: |
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        git add uuid.json
+        git commit -m "Update UUID"
+        git push
