@@ -15,7 +15,7 @@ jobs:
       - name: Generate new UUID JSON
         run: |
           uuid=$(uuidgen)
-          echo "{\"uuid\": \"$uuid\"}" > uuid.json
+          echo "{\"uuid\": \"$uuid\"}" > uuid-daily.json
           cat uuid.json
 
       - name: Commit and push changes
