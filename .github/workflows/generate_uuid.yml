@@ -1,8 +1,9 @@
 name: Generate UUID JSON
 
 on:
-  push:
-    branches: [ main ]
+  schedule:
+    - cron: "0 0 * * *"  # every day at 00:00 UTC
+  workflow_dispatch:      # allow manual run from GitHub UI
 
 permissions:
   contents: write
@@ -15,7 +16,8 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v3
       with:
-        persist-credentials: true  # keeps token so we can push
+        persist-credentials: true
+        fetch-depth: 0
 
     - name: Generate UUID and write to JSON
       run: |
@@ -27,5 +29,6 @@ jobs:
         git config user.name "github-actions"
         git config user.email "actions@github.com"
         git add uuid.json
-        git commit -m "Update UUID" || echo "No changes to commit"
-        git push
+        git commit -m "Daily UUID update" || echo "No changes to commit"
+        git pull --rebase origin main || true
+        git push origin main --force
