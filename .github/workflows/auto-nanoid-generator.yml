@@ -1,0 +1,70 @@
+name: Auto NanoID Generator
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # ✅ Runs every 5 minutes
+  workflow_dispatch:         # ✅ Allows manual trigger
+
+permissions:
+  contents: write            # ✅ Needed to commit changes
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate NanoID and save to file
+        run: |
+          mkdir -p src
+          cat > src/NanoIdUtils.js <<'EOF'
+          class NanoIdUtils {
+              static DEFAULT_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+              static DEFAULT_SIZE = 21;
+
+              static randomNanoId() {
+                  const alphabet = NanoIdUtils.DEFAULT_ALPHABET;
+                  const size = NanoIdUtils.DEFAULT_SIZE;
+
+                  const mask = (2 << Math.floor(Math.log(alphabet.length - 1) / Math.log(2))) - 1;
+                  const step = Math.ceil(1.6 * mask * size / alphabet.length);
+                  let id = '';
+
+                  while (true) {
+                      const bytes = new Uint8Array(step);
+                      crypto.getRandomValues(bytes);
+
+                      for (let i = 0; i < step; i++) {
+                          const alphabetIndex = bytes[i] & mask;
+                          if (alphabetIndex < alphabet.length) {
+                              id += alphabet[alphabetIndex];
+                              if (id.length === size) return id;
+                          }
+                      }
+                  }
+              }
+          }
+
+          export default NanoIdUtils;
+          EOF
+
+          node -e "import('./src/NanoIdUtils.js').then(m => {
+            const id = m.default.randomNanoId();
+            const fs = require('fs');
+            fs.writeFileSync('nanoid.json', JSON.stringify({ nanoid: id }));
+          });"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add nanoid.json
+          git commit -m "Update NanoID $(date -u +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
